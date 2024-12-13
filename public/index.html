@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subir y Descargar Archivos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+    }
+    .container {
+      max-width: 500px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+    input[type="file"] {
+      margin-bottom: 20px;
+    }
+    button {
+      background: #007bff;
+      color: #fff;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .download-link {
+      display: block;
+      margin-top: 20px;
+      text-decoration: none;
+      color: #007bff;
+      font-weight: bold;
+    }
+    .download-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Subir y Descargar Archivos</h1>
+    <form id="uploadForm">
+      <input type="file" name="file" id="fileInput" required />
+      <button type="submit">Subir Archivo</button>
+    </form>
+    <div id="result"></div>
+  </div>
+
+  <script>
+    const uploadForm = document.getElementById('uploadForm');
+    const resultDiv = document.getElementById('result');
+
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+      if (!file) {
+        alert('Por favor, selecciona un archivo.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+  const response = await fetch('http://localhost:3000/upload', {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error('Error al subir el archivo.');
+  }
+
+  const data = await response.json();
+
+  // Descargar automáticamente el archivo
+  const downloadResponse = await fetch(data.downloadUrl);
+  if (!downloadResponse.ok) {
+    throw new Error('Error al descargar el archivo procesado.');
+  }
+
+  const blob = await downloadResponse.blob();
+  const url = window.URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = data.fileName || 'archivo_procesado.xlsx'; // Nombre del archivo descargado
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  // Limpia la URL creada
+  window.URL.revokeObjectURL(url);
+
+  resultDiv.innerHTML = `<p>Archivo descargado exitosamente.</p>`;
+} catch (error) {
+        resultDiv.innerHTML = `<p style="color: red;">${error.message}</p>`;
+        }
+
+
+    });
+  </script>
+</body>
+</html>

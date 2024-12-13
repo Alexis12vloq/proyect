@@ -28,6 +28,14 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+// Sirve la carpeta "public" como carpeta estática
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Redirigir la raíz ("/") al archivo index.html automáticamente
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Ruta para subir archivos ZIP y generar el Excel dinámico
 app.post('/upload', upload.single('file'), (req, res) => {
   try {

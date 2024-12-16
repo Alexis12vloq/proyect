@@ -57,17 +57,13 @@ app.post('/upload', upload.single('file'), (req, res) => {
     const zipEntries = zip.getEntries(); // Obtén los archivos dentro del ZIP
 
     const allData = []; // Aquí guardaremos los datos combinados
-    const allColumns = new Set(); // Aquí guardaremos todas las columnas únicas
 
     zipEntries.forEach((entry) => {
       if (entry.entryName.endsWith('.json')) {
         // Leer y procesar solo los archivos JSON
         const jsonData = JSON.parse(zip.readAsText(entry));
-        const flattenedData = flattenJson(jsonData); // Aplana el JSON
-        allData.push(flattenedData);
-
-        // Agregar las claves del JSON a las columnas únicas
-        Object.keys(flattenedData).forEach((key) => allColumns.add(key));
+        const rows = flattenAndExpandJson(jsonData); // Aplana y expande el JSON
+        allData.push(...rows); // Agregar todas las filas procesadas
       }
     });
 
@@ -76,17 +72,10 @@ app.post('/upload', upload.single('file'), (req, res) => {
       return res.status(400).send('El archivo ZIP no contiene JSON válidos.');
     }
 
-    // Generar las filas para el Excel
-    const rows = [Array.from(allColumns)]; // Encabezados
-    allData.forEach((data) => {
-      const row = Array.from(allColumns).map((col) => data[col] ?? ''); // Agregar valores o dejar en blanco
-      rows.push(row);
-    });
-
     // Crear un libro de trabajo y hoja de cálculo
     const workbook = xlsx.utils.book_new();
-    const worksheet = xlsx.utils.aoa_to_sheet(rows);
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Datos');
+    const worksheet = xlsx.utils.json_to_sheet(allData);
+    xlsx.utils.book_append_sheet(workbook, worksheet, 'Datossss');
 
     const processedDir = 'processed/';
     if (!fs.existsSync(processedDir)) {
@@ -109,6 +98,32 @@ app.post('/upload', upload.single('file'), (req, res) => {
   }
 });
 
+// Función para aplanar y expandir un JSON con filas por producto
+const flattenAndExpandJson = (data) => {
+  const rows = [];
+
+  // Extraer productos y generar filas por cada producto
+  data.products.forEach((product) => {
+    product.items.forEach((item) => {
+      const flattened = flattenJson(data); // Aplanar el JSON principal
+      delete flattened.products; // Eliminar el array original de productos
+
+      // Agregar información específica del producto e ítem
+      flattened.product_name = product.name;
+      flattened.product_price = product.price;
+      flattened.product_quantity = product.quantity;
+      flattened.item_code = item.code;
+      flattened.item_name = item.name;
+      flattened.item_price = item.price;
+      flattened.item_quantity = item.quantity;
+
+      rows.push(flattened);
+    });
+  });
+
+  return rows;
+};
+
 // Función para aplanar un JSON
 const flattenJson = (data, prefix = '') => {
   const result = {};
@@ -118,8 +133,8 @@ const flattenJson = (data, prefix = '') => {
       // Si es un objeto, aplanar sus propiedades con un prefijo
       Object.assign(result, flattenJson(data[key], `${prefix}${key}_`));
     } else if (Array.isArray(data[key])) {
-      // Si es un array, concatenar los valores como una cadena
-      result[`${prefix}${key}`] = JSON.stringify(data[key]);
+      // Ignorar arrays (procesados en otra función)
+      continue;
     } else {
       // Si es un valor primitivo, añadirlo directamente
       result[`${prefix}${key}`] = data[key] ?? ''; // Solo asigna '' si el valor es null o undefined

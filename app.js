@@ -104,35 +104,47 @@ const flattenAndExpandJson = (data) => {
   const hasCupons = data.Cupones ? true : false;
 
   // Procesar productos e items
-  data.products.forEach((product) => {
-    product.items?.forEach((item) => {
-      const flattened = flattenJson(data); // Aplanar el JSON principal
-      delete flattened.products; // Eliminar el array original de productos
+  if (data.products && Array.isArray(data.products)) {
+    data.products.forEach((product) => {
+      if (product.items && Array.isArray(product.items)) {
+        product.items.forEach((item) => {
+          const flattened = flattenJson(data); // Aplanar el JSON principal
+          delete flattened.products; // Eliminar el array original de productos
 
-      // Agregar información específica del producto e ítem
-      flattened.has_cupons = hasCupons;
-      flattened.product_name = product.name;
-      flattened.product_price = product.price;
-      flattened.product_quantity = product.quantity;
-      flattened.item_code = item.code;
-      flattened.item_name = item.name;
-      flattened.item_price = item.price;
-      flattened.item_quantity = item.quantity;
+          // Agregar información específica del producto e ítem
+          flattened.has_cupons = hasCupons;
+          flattened.product_name = product.name;
+          flattened.product_price = product.price;
+          flattened.product_quantity = product.quantity;
+          flattened.item_code = item.code;
+          flattened.item_name = item.name;
+          flattened.item_price = item.price;
+          flattened.item_quantity = item.quantity;
 
-      // Procesar cupones si existen
-      if (data.Cupones && data.Cupones.Cupon) {
-        data.Cupones.Cupon.forEach((cupon, index) => {
-          flattened[`cupon${index + 1}_quantity`] = cupon.quantity;
-          flattened[`cupon${index + 1}_Promonum`] = cupon.Promonum;
-          flattened[`cupon${index + 1}_price`] = cupon.price;
-          flattened[`cupon${index + 1}_Cupon`] = cupon.Cupon;
-          flattened[`cupon${index + 1}_Monto_Descuento`] = cupon.Monto_Descuento_Producto;
+          // Procesar cupones si existen
+          if (data.Cupones && data.Cupones.Cupon) {
+            data.Cupones.Cupon.forEach((cupon, index) => {
+              flattened[`cupon${index + 1}_quantity`] = cupon.quantity;
+              flattened[`cupon${index + 1}_Promonum`] = cupon.Promonum;
+              flattened[`cupon${index + 1}_price`] = cupon.price;
+              flattened[`cupon${index + 1}_Cupon`] = cupon.Cupon;
+              flattened[`cupon${index + 1}_Monto_Descuento`] = cupon.Monto_Descuento_Producto;
+            });
+          }
+
+          rows.push(flattened);
         });
+      } else {
+        const flattened = flattenJson(data);
+        delete flattened.products;
+        flattened.has_cupons = hasCupons;
+        flattened.product_name = product.name;
+        flattened.product_price = product.price;
+        flattened.product_quantity = product.quantity;
+        rows.push(flattened);
       }
-
-      rows.push(flattened);
     });
-  });
+  }
 
   return rows;
 };

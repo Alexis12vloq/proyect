@@ -75,7 +75,7 @@ app.post('/upload', upload.single('file'), (req, res) => {
     // Crear un libro de trabajo y hoja de cálculo
     const workbook = xlsx.utils.book_new();
     const worksheet = xlsx.utils.json_to_sheet(allData);
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Datossss');
+    xlsx.utils.book_append_sheet(workbook, worksheet, 'Datos');
 
     const processedDir = 'processed/';
     if (!fs.existsSync(processedDir)) {
@@ -101,14 +101,16 @@ app.post('/upload', upload.single('file'), (req, res) => {
 // Función para aplanar y expandir un JSON con filas por producto
 const flattenAndExpandJson = (data) => {
   const rows = [];
+  const hasCupons = data.Cupones ? true : false;
 
-  // Extraer productos y generar filas por cada producto
+  // Procesar productos e items
   data.products.forEach((product) => {
-    product.items.forEach((item) => {
+    product.items?.forEach((item) => {
       const flattened = flattenJson(data); // Aplanar el JSON principal
       delete flattened.products; // Eliminar el array original de productos
 
       // Agregar información específica del producto e ítem
+      flattened.has_cupons = hasCupons;
       flattened.product_name = product.name;
       flattened.product_price = product.price;
       flattened.product_quantity = product.quantity;
@@ -116,6 +118,17 @@ const flattenAndExpandJson = (data) => {
       flattened.item_name = item.name;
       flattened.item_price = item.price;
       flattened.item_quantity = item.quantity;
+
+      // Procesar cupones si existen
+      if (data.Cupones && data.Cupones.Cupon) {
+        data.Cupones.Cupon.forEach((cupon, index) => {
+          flattened[`cupon${index + 1}_quantity`] = cupon.quantity;
+          flattened[`cupon${index + 1}_Promonum`] = cupon.Promonum;
+          flattened[`cupon${index + 1}_price`] = cupon.price;
+          flattened[`cupon${index + 1}_Cupon`] = cupon.Cupon;
+          flattened[`cupon${index + 1}_Monto_Descuento`] = cupon.Monto_Descuento_Producto;
+        });
+      }
 
       rows.push(flattened);
     });
